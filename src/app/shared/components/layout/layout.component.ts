@@ -211,6 +211,13 @@ export class LayoutComponent {
         { name: 'Cash Receipt', path: '/payment/cashreceipt' },
         { name: 'Payment Method', path: '/payment/paymentmethod' }
       ]
+    },
+    {
+      name: 'Commercial',
+       expanded: false,
+       features: [
+         { name: 'Descuentos', path: '/commercial/discount' }
+     ]
     }
   ]);
 

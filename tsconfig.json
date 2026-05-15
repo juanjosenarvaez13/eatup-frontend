@@ -20,7 +20,8 @@
       "@core/*":     ["src/app/core/*"],
       "@shared/*":   ["src/app/shared/*"],
       "@features/*": ["src/app/features/*"],
-      "@payment/*":  ["src/app/features/payment/*"]
+      "@payment/*":  ["src/app/features/payment/*"],
+      "@commercial/*":  ["src/app/features/commercial/*"]
     }
   },
   "angularCompilerOptions": {

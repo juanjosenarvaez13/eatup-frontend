@@ -39,6 +39,12 @@ export const routes: Routes = [
           import('./features/payment/paymentmethod/paymentmethod.routes').then(
             m => m.PAYMENT_METHOD_ROUTES
           )
+      },
+      {
+        path: 'commercial/discount',
+         loadChildren: () =>
+          import('./features/commercial/discount/discount.routes')
+            .then(m => m.DISCOUNT_ROUTES)
       }
     ]
   },
