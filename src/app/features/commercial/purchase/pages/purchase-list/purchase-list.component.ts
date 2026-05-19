@@ -33,8 +33,27 @@ import { ProductService } from '../../services/product.service';
         <div class="field"><label>N° Orden</label><input [(ngModel)]="orderNumberFilter" (ngModelChange)="onDynamicFilterChange()" /></div>
         <div class="field"><label>Proveedor</label><select [(ngModel)]="providerFilter" (ngModelChange)="onDynamicFilterChange()"><option value="">Todos</option>@for (s of suppliers; track s.id) {<option [value]="s.id">{{ s.name }}</option>}</select></div>
         <div class="field"><label>Producto</label><input [(ngModel)]="productFilter" (ngModelChange)="onDynamicFilterChange()" /></div>
-        <div class="field"><label>Fecha inicio</label><input type="date" [(ngModel)]="startDateFilter" /></div>
-        <div class="field"><label>Fecha fin</label><input type="date" [(ngModel)]="endDateFilter" /></div>
+        <div class="field">
+          <label>Fecha inicio</label>
+
+          <input
+            type="date"
+            [(ngModel)]="startDateFilter"
+            [max]="today"
+            (ngModelChange)="onStartDateChange()"
+          />
+        </div>
+
+        <div class="field">
+          <label>Fecha fin</label>
+
+          <input
+            type="date"
+            [(ngModel)]="endDateFilter"
+            [min]="startDateFilter || null"
+            [max]="today"
+          />
+        </div>
         <div class="field field-action"><button class="btn-secondary" (click)="applyDateFilters()">Aplicar fechas</button></div>
       </section>
 
@@ -104,6 +123,9 @@ export class PurchaseListComponent implements OnInit, OnDestroy {
   filteredPurchases = computed(() => this.purchases().filter(p => p.orderNumber.toLowerCase().includes(this.orderNumberFilter.toLowerCase()) && (!this.providerFilter || p.providerId === this.providerFilter) && (!this.productFilter || p.items.some(i => this.getProductName(i.productId).toLowerCase().includes(this.productFilter.toLowerCase()))) && (!this.appliedStartDate() || new Date(p.createdDate) >= new Date(`${this.appliedStartDate()}T00:00:00`)) && (!this.appliedEndDate() || new Date(p.createdDate) <= new Date(`${this.appliedEndDate()}T23:59:59`))));
   rangeStart = computed(() => this.totalElements() === 0 ? 0 : this.page() * this.size());
   rangeEnd = computed(() => Math.min((this.page() + 1) * this.size(), this.totalElements()));
+  today = new Date()
+  .toISOString()
+  .split('T')[0];
 
   constructor(private purchaseService: PurchaseService, private providerService: ProviderService, private productService: ProductService, private router: Router, private route: ActivatedRoute) {}
   ngOnInit(): void { this.loadPurchases(); this.loadSuppliers(); this.loadProducts(); interval(10000).pipe(takeUntil(this.destroy$)).subscribe(() => this.loadPurchases(false)); }
@@ -189,4 +211,15 @@ export class PurchaseListComponent implements OnInit, OnDestroy {
   confirmReceive() { const s = this.selectedPurchase(); if (!s) return; const r: UpdatePurchaseStatusRequest = { status: 'RECEIVED' }; this.purchaseService.updateStatus(this.locationId, s.id, r).subscribe(() => { this.receiveModalOpen.set(false); this.loadPurchases(); }); }
   prevPage() { if (this.page() > 0) { this.page.update(v => v - 1); this.loadPurchases(); } }
   nextPage() { if (this.page() < this.totalPages() - 1) { this.page.update(v => v + 1); this.loadPurchases(); } }
+  onStartDateChange(): void {
+
+  if (
+      this.endDateFilter &&
+      this.startDateFilter &&
+      this.endDateFilter <
+        this.startDateFilter
+    ) {
+      this.endDateFilter = '';
+    }
+  }
 }
