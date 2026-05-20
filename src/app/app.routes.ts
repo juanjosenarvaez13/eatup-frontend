@@ -57,6 +57,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'commercial/purchases',
+        loadChildren: () =>
+          import('./features/commercial/purchase/purchase.routes').then(
+            m => m.PURCHASE_ROUTES
+          )
+      },
+      {
         path: 'commercial/discount',
         loadChildren: () =>
           import('./features/commercial/discount/discount.routes').then(
