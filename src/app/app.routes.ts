@@ -91,10 +91,24 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'inventory/product',
+        loadChildren: () =>
+          import('./features/inventory/product/product.routes').then(
+            m => m.PRODUCT_ROUTES
+          )
+      },
+      {
         path: 'inventory/transfer',
         loadChildren: () =>
           import('./features/inventory/transfer/transfer.routes').then(
             m => m.TRANSFER_ROUTES
+          )
+      },
+      {
+        path: 'inventory/categories',
+        loadChildren: () =>
+          import('./features/inventory/categories/categories.routes').then(
+            m => m.CATEGORIES_ROUTES
           )
       }
     ]
