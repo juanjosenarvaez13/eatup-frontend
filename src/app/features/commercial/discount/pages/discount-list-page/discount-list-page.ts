@@ -3,14 +3,13 @@ import { CommonModule } from '@angular/common';
 import { filter, retry } from 'rxjs/operators';
 import { RouterLink, Router, NavigationEnd } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { CategoryService } from '@commercial/discount/services/category';
 import { DiscountService } from '@commercial/discount/services/discount';
 import { Discount } from '@commercial/discount/models/discount.model';
 import { ENV } from '@config/env.config';
 import { DiscountFilterPipe } from '@commercial/discount/pipes/discount-filter.pipe';
 import { DiscountStatusBadgeComponent } from '@commercial/discount/components/discount-status-badge/discount-status-badge';
 
-interface Category { id: string; name: string; status: string; }
 
 @Component({
   selector: 'app-discount-list-page',
@@ -21,11 +20,9 @@ interface Category { id: string; name: string; status: string; }
 })
 export class DiscountListPage implements OnInit {
   private readonly discountService = inject(DiscountService);
-  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly categoryService = inject(CategoryService);
   private excludeId = '';
-
-  private readonly categoriesUrl = `${ENV.apiUrl.replace('/api/v1', '')}/inventory/api/v1/categories/subtype/descuento`;
 
   discounts   = signal<Discount[]>([]);
   categoryMap = signal<Map<string, string>>(new Map());
@@ -39,7 +36,7 @@ export class DiscountListPage implements OnInit {
   private readonly filterPipe = new DiscountFilterPipe();
 
   ngOnInit(): void {
-    this.http.get<Category[]>(this.categoriesUrl).subscribe({
+    this.categoryService.getAll().subscribe({
       next: (data) => this.categoryMap.set(new Map(data.map(c => [c.id, c.name])))
     });
 
