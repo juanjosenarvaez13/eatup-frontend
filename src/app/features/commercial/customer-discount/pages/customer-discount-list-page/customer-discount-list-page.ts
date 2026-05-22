@@ -1,17 +1,17 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterLink, Router, NavigationEnd } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
 import { CustomerDiscountService } from '@commercial/customer-discount/services/customer-discount';
 import { CustomerDiscount } from '@commercial/customer-discount/models/customer-discount.model';
 import { DiscountService } from '@commercial/discount/services/discount';
+import { ClientService } from '@commercial/customer-discount/services/client';
+import { LocationService } from '@commercial/customer-discount/services/location';
 import { ENV } from '@config/env.config';
 import { FormsModule } from '@angular/forms';
 import { CustomerDiscountFilterPipe } from '@commercial/customer-discount/pipes/customer-discount-filter.pipe';
 import { CustomerDiscountExpiryBadgeComponent } from '@commercial/customer-discount/components/customer-discount-expiry-badge/customer-discount-expiry-badge';
 
-interface Client { id: string; firstName: string; firstLastName: string; documentNumber: string; }
 
 @Component({
   selector: 'app-customer-discount-list-page',
@@ -20,10 +20,12 @@ interface Client { id: string; firstName: string; firstLastName: string; documen
   templateUrl: './customer-discount-list-page.html',
   styleUrl: './customer-discount-list-page.css'
 })
+
 export class CustomerDiscountListPage implements OnInit {
   private readonly service         = inject(CustomerDiscountService);
   private readonly discountService = inject(DiscountService);
-  private readonly http            = inject(HttpClient);
+  private readonly clientService   = inject(ClientService);
+  private readonly locationService = inject(LocationService);
   private readonly router          = inject(Router);
   private excludeId = '';
 
@@ -44,22 +46,19 @@ export class CustomerDiscountListPage implements OnInit {
   private readonly filterPipe = new CustomerDiscountFilterPipe();
 
   ngOnInit(): void {
-
     this.excludeId = history.state?.deletedId ?? '';
-    
+
     this.discountService.getAll().subscribe({
       next: (data) => this.discountMap.set(new Map(data.map(d => [d.id, `${d.description} (${d.percentage}%)`])))
     });
 
-    this.http.get<Client[]>(this.clientsUrl).subscribe({
+    this.clientService.getAll().subscribe({
       next: (data) => this.clientMap.set(new Map(data.map(c => [c.id, `${c.firstName} ${c.firstLastName} — ${c.documentNumber}`])))
     });
 
     const locId = ENV.locationId;
     if (locId) {
-      this.http.get<{ id: string; name: string }>(
-        `${this.baseApiUrl}/inventory/api/v1/location/${locId}`
-      ).subscribe({
+      this.locationService.getById(locId).subscribe({
         next:  (loc) => this.locationName.set(loc.name),
         error: ()    => this.locationName.set('Sede no encontrada')
       });
