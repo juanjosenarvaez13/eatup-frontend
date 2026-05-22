@@ -254,8 +254,8 @@ export class LayoutComponent {
       name: 'Payment',
       expanded: false,
       features: [
-        { name: 'Cash Receipt', path: '/payment/cashreceipt' },
-        { name: 'Facturas', path: '/payment/invoice' },
+        { name: 'Cash Receipt',   path: '/payment/cashreceipt' },
+        { name: 'Facturas',       path: '/payment/invoice' },
         { name: 'Payment Method', path: '/payment/paymentmethod' }
       ]
     },
@@ -263,16 +263,17 @@ export class LayoutComponent {
       name: 'Commercial',
       expanded: false,
       features: [
-        { name: 'Descuentos', path: '/commercial/discount' },
-        { name: 'Vendedores', path: '/commercial/seller' },
-        { name: 'Compras', path: '/commercial/purchases' },
-        { name: 'Mesas', path: '/commercial/tables' },
-        { name: 'Ventas', path: '/commercial/sales' }
+        { name: 'Descuentos',             path: '/commercial/discount' },
+        { name: 'Clientes por Descuento', path: '/commercial/customer-discount' },
+        { name: 'Vendedores',             path: '/commercial/seller' },
+        { name: 'Compras',                path: '/commercial/purchases' },
+        { name: 'Mesas',                  path: '/commercial/tables' },
+        { name: 'Ventas',                 path: '/commercial/sales' }
       ]
     },
     {
       name: 'Inventory',
-      expanded: true,
+      expanded: false,
       features: [
         { name: 'Transfer', path: '/inventory/transfer' },
         { name: 'Categories', path: '/inventory/categories' },

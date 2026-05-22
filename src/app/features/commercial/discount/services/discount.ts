@@ -12,7 +12,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DiscountService {
   private readonly http = inject(HttpClient);
-private readonly baseUrl = `${ENV.apiUrl.replace('/api/v1', '')}/comercial/api/v1/discounts`;
+private readonly baseUrl = `${ENV.apiUrl.replace('/api/v1', '')}/commercial/api/v1/discounts`;
 
   getAll(): Observable<Discount[]> {
     return this.http.get<Discount[]>(this.baseUrl);

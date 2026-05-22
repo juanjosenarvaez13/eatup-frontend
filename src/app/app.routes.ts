@@ -48,14 +48,6 @@ export const routes: Routes = [
             m => m.PAYMENT_METHOD_ROUTES
           )
       },
-
-      {
-        path: 'commercial/sales',
-        loadChildren: () =>
-          import('./features/commercial/sales/sales.routes').then(
-            m => m.SALES_ROUTES
-          )
-      },
       {
         path: 'commercial/purchases',
         loadChildren: () =>
@@ -71,10 +63,24 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'commercial/customer-discount',
+        loadChildren: () =>
+          import('./features/commercial/customer-discount/customer-discount.routes').then(
+            m => m.CUSTOMER_DISCOUNT_ROUTES
+          )
+      },
+      {
         path: 'commercial/seller',
         loadChildren: () =>
           import('./features/commercial/seller/seller.routes').then(
             m => m.SELLER_ROUTES
+          )
+      },
+      {
+        path: 'commercial/sales',
+        loadChildren: () =>
+          import('./features/commercial/sales/sales.routes').then(
+            m => m.SALES_ROUTES
           )
       },
       {
@@ -83,8 +89,7 @@ export const routes: Routes = [
           import('./features/commercial/tables/tables.routes').then(
             m => m.TABLES_ROUTES
           )
-      }
-,
+      },
       {
         path: 'inventory/product',
         loadChildren: () =>
