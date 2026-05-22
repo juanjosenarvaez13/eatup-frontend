@@ -256,6 +256,7 @@ export class LayoutComponent {
       features: [
         { name: 'Transfer', path: '/inventory/transfer' },
         { name: 'Categories', path: '/inventory/categories' }
+        { name: 'Productos', path: '/inventory/product' }
       ]
     }
   ]);
