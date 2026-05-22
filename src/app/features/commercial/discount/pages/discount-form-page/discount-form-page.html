@@ -6,7 +6,7 @@
   </p>
 </div>
 
-<div class="form-card">
+<form [formGroup]="form" class="form-card" (ngSubmit)="save()">
 
   <div class="step">
     <div class="step-header">
@@ -15,14 +15,14 @@
     </div>
     <div class="field-group">
       <label for="categoryId">Categoría</label>
-      <select id="categoryId" class="input" [(ngModel)]="categoryId">
+      <select id="categoryId" class="input" formControlName="categoryId">
         <option value="">-- Selecciona una categoría --</option>
         @for (c of categories(); track c.id) {
           <option [value]="c.id">{{ c.name }}</option>
         }
       </select>
-      @if (errors.categoryId) {
-        <span class="field-error">{{ errors.categoryId }}</span>
+      @if (categoryIdCtrl.invalid && categoryIdCtrl.touched) {
+        <span class="field-error">Selecciona una categoría.</span>
       } @else {
         <span class="field-hint">Solo se muestran categorías activas de tipo descuento.</span>
       }
@@ -35,17 +35,20 @@
       <h2>Porcentaje de Descuento</h2>
     </div>
     <div class="field-group">
-    <label for="percentage">Porcentaje (%)</label>
-    <input id="percentage" type="number" class="input input-short"
-        placeholder="Ej: 10" min="1" max="100"
-        [(ngModel)]="percentage"
-        (keydown)="$event.key === '-' || $event.key === '+' || $event.key === 'e' || $event.key === 'E' || $event.key === '.' ? $event.preventDefault() : null"
-        (input)="onPercentageInput($event)" />
-    @if (errors.percentage) {
-        <span class="field-error">{{ errors.percentage }}</span>
-    } @else {
+      <label for="percentage">Porcentaje (%)</label>
+      <input id="percentage" type="number" class="input input-short"
+             placeholder="Ej: 10" min="1" max="100"
+             formControlName="percentage"
+             (keydown)="$event.key==='-'||$event.key==='+'||$event.key==='e'||$event.key==='E'||$event.key==='.'?$event.preventDefault():null"
+             (input)="onPercentageInput($event)" />
+      @if (percentageCtrl.invalid && percentageCtrl.touched) {
+        <span class="field-error">
+          @if (percentageCtrl.errors?.['required']) { El porcentaje es obligatorio. }
+          @else { Debe ser un valor entre 1 y 100. }
+        </span>
+      } @else {
         <span class="field-hint">Debe ser un valor entre 1 y 100.</span>
-    }
+      }
     </div>
   </div>
 
@@ -55,28 +58,31 @@
       <h2>Descripción</h2>
     </div>
     <div class="field-group">
-    <label for="description">Descripción del descuento</label>
-    <input id="description" type="text" maxlength="100" class="input"
-       placeholder="Ej: Descuento de bienvenida"
-       [(ngModel)]="description" />
-    @if (errors.description) {
-        <span class="field-error">{{ errors.description }}</span>
-    } @else {
+      <label for="description">Descripción del descuento</label>
+      <input id="description" type="text" maxlength="100" class="input"
+             placeholder="Ej: Descuento de bienvenida"
+             formControlName="description" />
+      @if (descriptionCtrl.invalid && descriptionCtrl.touched) {
+        <span class="field-error">
+          @if (descriptionCtrl.errors?.['required'])   { La descripción es obligatoria. }
+          @else if (descriptionCtrl.errors?.['minlength']) { Mínimo 5 caracteres. }
+          @else if (descriptionCtrl.errors?.['maxlength']) { Máximo 100 caracteres. }
+          @else if (descriptionCtrl.errors?.['backend'])   { {{ descriptionCtrl.errors?.['backend'] }} }
+        </span>
+      } @else {
         <span class="field-hint">Entre 5 y 100 caracteres.</span>
-    }
+      }
     </div>
   </div>
 
   <div class="form-actions">
-    @if (errors.general) {
-      <div class="alert-error">{{ errors.general }}</div>
+    @if (generalError()) {
+      <div class="alert-error">{{ generalError() }}</div>
     }
-    <button class="btn-primary"
-            [disabled]="submitting()"
-            (click)="save()">
+    <button type="submit" class="btn-primary" [disabled]="submitting()">
       {{ submitting() ? 'Guardando...' : isEditing() ? 'Actualizar' : 'Crear Descuento' }}
     </button>
     <a class="btn-ghost" routerLink="..">Cancelar</a>
   </div>
 
-</div>
+</form>

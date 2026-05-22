@@ -1,44 +1,49 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { DiscountService } from '@commercial/discount/services/discount';
 import { Discount } from '@commercial/discount/models/discount.model';
 import { ENV } from '@config/env.config';
 
-interface Category {
-  id: string;
-  name: string;
-  status: string;
-}
+interface Category { id: string; name: string; status: string; }
 
 @Component({
   selector: 'app-discount-form-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './discount-form-page.html',
   styleUrl: './discount-form-page.css'
 })
 export class DiscountFormPage implements OnInit {
   private readonly discountService = inject(DiscountService);
-  private readonly http = inject(HttpClient);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
+  private readonly http            = inject(HttpClient);
+  private readonly router          = inject(Router);
+  private readonly route           = inject(ActivatedRoute);
 
   private readonly categoriesUrl = `${ENV.apiUrl.replace('/api/v1', '')}/inventory/api/v1/categories/subtype/descuento`;
 
-  isEditing = signal(false);
-  submitting = signal(false);
-  categories = signal<Category[]>([]);
-
-  categoryId = '';
-  percentage = 0;
-  description = '';
+  isEditing    = signal(false);
+  submitting   = signal(false);
+  categories   = signal<Category[]>([]);
+  generalError = signal('');
 
   private discountId = '';
 
-  errors = { categoryId: '', percentage: '', description: '', general: '' };
+  form = new FormGroup({
+    categoryId:  new FormControl('', [Validators.required]),
+    percentage:  new FormControl<number | null>(null, [
+      Validators.required, Validators.min(1), Validators.max(100)
+    ]),
+    description: new FormControl('', [
+      Validators.required, Validators.minLength(5), Validators.maxLength(100)
+    ])
+  });
+
+  get categoryIdCtrl()  { return this.form.get('categoryId')!; }
+  get percentageCtrl()  { return this.form.get('percentage')!; }
+  get descriptionCtrl() { return this.form.get('description')!; }
 
   ngOnInit(): void {
     this.http.get<Category[]>(this.categoriesUrl).subscribe({
@@ -48,72 +53,54 @@ export class DiscountFormPage implements OnInit {
     this.discountId = this.route.snapshot.paramMap.get('id') ?? '';
     if (this.discountId) {
       this.isEditing.set(true);
-      this.loadDiscount();
+      this.discountService.getById(this.discountId).subscribe({
+        next: (data: Discount) => this.form.patchValue({
+          categoryId:  data.categoryId,
+          percentage:  data.percentage,
+          description: data.description
+        }),
+        error: () => this.generalError.set('Error al cargar el descuento.')
+      });
     }
-  }
-
-  loadDiscount(): void {
-    this.discountService.getById(this.discountId).subscribe({
-      next: (data: Discount) => {
-        this.categoryId = data.categoryId;
-        this.percentage = data.percentage;
-        this.description = data.description;
-      },
-      error: () => this.errors.general = 'Error al cargar el descuento.'
-    });
   }
 
   onPercentageInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     let val = parseInt(input.value, 10);
-    if (isNaN(val)) { this.percentage = 0; return; }
+    if (isNaN(val)) { this.percentageCtrl.setValue(null); return; }
     if (val > 100) val = 100;
-    if (val < 1) val = 1;
-    this.percentage = val;
+    if (val < 1)   val = 1;
+    this.percentageCtrl.setValue(val);
     input.value = String(val);
   }
 
   save(): void {
     if (this.submitting()) return;
-    this.errors = { categoryId: '', percentage: '', description: '', general: '' };
-
-    let valid = true;
-    if (!this.categoryId) { this.errors.categoryId = 'Selecciona una categoría.'; valid = false; }
-    if (!this.percentage || this.percentage < 1 || this.percentage > 100) { this.errors.percentage = 'El porcentaje debe estar entre 1 y 100.'; valid = false; }
-    if (!this.description.trim()) { this.errors.description = 'La descripción es obligatoria.'; valid = false; }
-    else if (this.description.trim().length < 5) { this.errors.description = 'La descripción debe tener mínimo 5 caracteres.'; valid = false; }
-    else if (this.description.trim().length > 100) { this.errors.description = 'La descripción no puede superar 100 caracteres.'; valid = false; }
-    if (!valid) return;
+    this.generalError.set('');
+    this.form.markAllAsTouched();
+    if (this.form.invalid) return;
 
     this.submitting.set(true);
-
-    const form = {
-      categoryId: this.categoryId,
-      percentage: this.percentage,
-      description: this.description.trim()
-    };
+    const { categoryId, percentage, description } = this.form.value;
 
     const request$ = this.isEditing()
-      ? this.discountService.update(this.discountId, form)
-      : this.discountService.create(form);
+      ? this.discountService.update(this.discountId, { categoryId: categoryId!, percentage: percentage!, description: description!.trim() })
+      : this.discountService.create({ categoryId: categoryId!, percentage: percentage!, description: description!.trim() });
 
     request$.subscribe({
-      next: () => {
-        this.submitting.set(false);
-        setTimeout(() => this.router.navigate(['/commercial/discount']), 500);
-      },
+      next: () => { this.submitting.set(false); setTimeout(() => this.router.navigate(['/commercial/discount']), 500); },
       error: (err) => {
         this.submitting.set(false);
-        const body = err.error;
-        if (body?.errors?.length) {
-          body.errors.forEach((e: string) => {
-            if (e.includes('percentage')) this.errors.percentage = 'El porcentaje debe estar entre 1 y 100.';
-            else if (e.includes('categoryId')) this.errors.categoryId = 'La categoría es obligatoria.';
-            else if (e.includes('description')) this.errors.description = 'La descripción no es válida.';
-            else this.errors.general = body.message ?? 'Error al guardar.';
+        const b = err.error;
+        if (b?.errors?.length) {
+          b.errors.forEach((e: string) => {
+            if (e.includes('percentage'))  this.percentageCtrl.setErrors({ backend: 'El porcentaje debe estar entre 1 y 100.' });
+            else if (e.includes('categoryId'))  this.categoryIdCtrl.setErrors({ backend: 'La categoría es obligatoria.' });
+            else if (e.includes('description')) this.descriptionCtrl.setErrors({ backend: 'La descripción no es válida.' });
+            else this.generalError.set(b.message ?? 'Error al guardar.');
           });
         } else {
-          this.errors.general = body?.message ?? 'Error al guardar el descuento.';
+          this.generalError.set(b?.message ?? 'Error al guardar el descuento.');
         }
       }
     });

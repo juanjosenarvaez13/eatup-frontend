@@ -36,6 +36,10 @@
   </select>
 </div>
 
+<span class="result-count">
+  {{ (discounts() | discountFilter:search():categoryMap()).length }} resultado(s)
+</span>
+
 @if (loading()) {
   <p class="loading">Cargando...</p>
 }
@@ -43,6 +47,7 @@
 @if (error()) {
   <div class="error-box">
     <strong>Error:</strong> {{ error() }}
+    <button class="btn-retry" (click)="loadDiscounts()">Reintentar</button>
   </div>
 }
 
@@ -64,7 +69,7 @@
         @for (discount of paginatedDiscounts; track discount.id) {
           <tr>
             <td>{{ discount.description }}</td>
-            <td><span class="detail-pending">—</span></td>
+            <td>{{ categoryName(discount.categoryId) }}</td>
             <td><span class="pct-badge">{{ discount.percentage }}%</span></td>
             <td>{{ discount.createdAt ? (discount.createdAt | date:'dd/MM/yyyy') : '—' }}</td>
             <td>{{ discount.modifiedAt ? (discount.modifiedAt | date:'dd/MM/yyyy') : '—' }}</td>

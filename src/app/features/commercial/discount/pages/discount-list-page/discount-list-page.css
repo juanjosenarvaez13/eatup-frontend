@@ -342,3 +342,83 @@ tbody tr:hover {
 .btn-icon.btn-action-danger:hover {
   background: #fef2f2;
 }
+.btn-retry {
+  margin-left: 1rem;
+  padding: 0.25rem 0.75rem;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: inherit;
+}
+.btn-retry:hover { opacity: 0.7; }
+/* ── Animación de entrada de página ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  animation: fadeInUp 0.4s ease both;
+}
+
+.stats-row {
+  animation: fadeInUp 0.45s ease both;
+}
+
+.table-container {
+  animation: fadeInUp 0.5s ease both;
+}
+
+/* ── Filas de tabla entran escalonadas ── */
+@keyframes slideInRow {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+tbody tr {
+  animation: slideInRow 0.3s ease both;
+}
+tbody tr:nth-child(1) { animation-delay: 0.05s; }
+tbody tr:nth-child(2) { animation-delay: 0.10s; }
+tbody tr:nth-child(3) { animation-delay: 0.15s; }
+tbody tr:nth-child(4) { animation-delay: 0.20s; }
+tbody tr:nth-child(5) { animation-delay: 0.25s; }
+
+/* ── Hover elevación en filas ── */
+tbody tr {
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+tbody tr:hover {
+  background: #fff7ed;
+  transform: translateX(3px);
+  box-shadow: -3px 0 0 var(--color-primary);
+}
+
+/* ── Stat cards con pulso al cargar ── */
+@keyframes statPop {
+  0%   { transform: scale(0.92); opacity: 0; }
+  70%  { transform: scale(1.04); }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.stat-card {
+  animation: statPop 0.4s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+/* ── Botón primario con efecto presión ── */
+.btn-primary {
+  transition: transform 0.1s, box-shadow 0.1s, opacity 0.2s;
+}
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ── Botones de acción con escala ── */
+.btn-icon {
+  transition: transform 0.15s, background 0.15s;
+}
+.btn-icon:hover {
+  transform: scale(1.15);
+}
+.result-count { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; display: block; }
