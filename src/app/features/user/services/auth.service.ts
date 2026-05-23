@@ -18,14 +18,43 @@ export class AuthService {
   readonly token = this._token.asReadonly();
   readonly isAuthenticated = computed(() => !!this._token());
 
+
+  getToken(): string | null {
+    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+
+    if (storedToken !== this._token()) {
+      this._token.set(storedToken);
+    }
+
+    return storedToken;
+  }
+
+  hasValidSession(): boolean {
+    return !!this.getToken();
+  }
+
+  syncTokenFromStorage(): void {
+    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+
+    if (storedToken !== this._token()) {
+      this._token.set(storedToken);
+    }
+  }
+
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(
       `${this.baseUrl}/userapi/v1/users/login`,
       request
     ).pipe(
       tap(response => {
-        localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
-        this._token.set(response.token);
+        const token = response.token || response.accessToken || response.jwt;
+
+        if (!token) {
+          throw new Error('La respuesta de autenticación no contiene token.');
+        }
+
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
+        this._token.set(token);
       })
     );
   }
