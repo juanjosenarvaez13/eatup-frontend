@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subject, EMPTY } from 'rxjs';
+import { Subject, EMPTY, forkJoin, of, interval } from 'rxjs';
 import { finalize, takeUntil, switchMap, catchError } from 'rxjs/operators';
 import { CustomerDiscountService } from '@commercial/customer-discount/services/customer-discount';
 import { CustomerDiscount } from '@commercial/customer-discount/models/customer-discount.model';
@@ -14,6 +14,7 @@ import { CustomerDiscountFilterPipe } from '@commercial/customer-discount/pipes/
 import { CustomerDiscountExpiryBadgeComponent } from '@commercial/customer-discount/components/customer-discount-expiry-badge/customer-discount-expiry-badge';
 import { DiscountStatusBadgeComponent } from '@commercial/discount/components/discount-status-badge/discount-status-badge';
 import { CustomerDiscountRefreshService } from '@commercial/customer-discount/services/customer-discount-refresh.service';
+interface Toast { id: string; type: 'success' | 'error'; message: string; }
 
 @Component({
   selector: 'app-customer-discount-list-page',
@@ -42,11 +43,13 @@ export class CustomerDiscountListPage implements OnInit, OnDestroy {
   protected readonly loading      = signal(false);
   protected readonly error        = signal('');
   protected readonly currentPage  = signal(1);
-  protected readonly pageSize     = 5;
+  protected readonly pageSize        = signal(5);
+  protected readonly pageSizeOptions = [5, 10, 20];
   protected readonly search       = signal('');
   protected readonly sortBy       = signal<'assignedAt' | 'startDate' | 'endDate' | ''>('');
   protected readonly expiryFilter = signal<'all' | 'vigente' | 'por_vencer' | 'vencido'>('all');
   protected readonly confirmDeleteId = signal<string | null>(null);
+  protected readonly toasts = signal<Toast[]>([]);
 
   private readonly filterPipe = new CustomerDiscountFilterPipe();
   private readonly destroy$ = new Subject<void>();
@@ -55,26 +58,28 @@ export class CustomerDiscountListPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.excludeId = history.state?.deletedId ?? '';
 
-  this.discountService.getAll().subscribe({
-    next: (data) => {
-      this.discountMap.set(new Map(data.map(d => [d.id, `${d.description} (${d.percentage}%)`])));
-      this.discountActiveMap.set(new Map(data.map(d => [d.id, d.status])));
-    },
-    error: () => this.error.set('Error al cargar los descuentos disponibles.')
-  });
-
-  this.clientService.getAll().subscribe({
-    next: (data) => this.clientMap.set(new Map(data.map(c => [c.id, `${c.firstName} ${c.firstLastName} — ${c.documentNumber}`]))),
-    error: () => this.error.set('Error al cargar los clientes.')
-  });
-
     const locId = ENV.locationId;
-    if (locId) {
-      this.locationService.getById(locId).subscribe({
-        next:  (loc) => this.locationName.set(loc.name),
-        error: ()    => this.locationName.set('Sede no encontrada')
-      });
-    }
+    forkJoin([
+
+      this.discountService.getAll(),
+      this.clientService.getAll(),
+      locId ? this.locationService.getById(locId) : of(null)
+    ]).subscribe({
+      next: ([discounts, clients, loc]) => {
+        this.discountMap.set(
+          new Map(discounts.map(d => [d.id, `${d.description} (${d.percentage}%)`]))
+        );
+        this.discountActiveMap.set(
+          new Map(discounts.map(d => [d.id, d.status]))
+        );
+        this.clientMap.set(
+          new Map(clients.map(c => [c.id, `${c.firstName} ${c.firstLastName} — ${c.documentNumber}`]))
+        );
+        if (loc) this.locationName.set(loc.name);
+        else      this.locationName.set('—');
+      },
+      error: () => this.locationName.set('Error al cargar datos')
+    });
 
     this.loadTrigger$.pipe(
       switchMap(() => {
@@ -103,6 +108,14 @@ export class CustomerDiscountListPage implements OnInit, OnDestroy {
     this.refreshService.onRefresh$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(() => this.load());
+
+      interval(30_000).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      if (document.visibilityState === 'visible' && !this.loading()) {
+        this.silentRefresh();
+      }
+    });
   }
 
   protected discountName(id: string): string  { return this.discountMap().get(id) ?? '—'; }
@@ -115,15 +128,19 @@ export class CustomerDiscountListPage implements OnInit, OnDestroy {
     this.confirmDeleteId.set(id);
   }
 
-  protected confirmDelete(): void {
-    const id = this.confirmDeleteId();
-    if (!id) return;
-    this.confirmDeleteId.set(null);
-    this.items.update(list => list.filter(i => i.id !== id));
-    this.service.delete(id).subscribe({
-      error: () => { this.error.set('Error al eliminar.'); this.load(); }
-    });
-  }
+protected confirmDelete(): void {
+  const id = this.confirmDeleteId();
+  if (!id) return;
+  this.confirmDeleteId.set(null);
+  this.items.update(list => list.filter(i => i.id !== id));
+  this.service.delete(id).subscribe({
+    next: () => this.showToast('success', 'Asignación eliminada correctamente.'),
+    error: () => {
+      this.showToast('error', 'No se pudo eliminar. Intenta de nuevo.');
+      this.load();
+    }
+  });
+}
 
   protected cancelDelete(): void {
     this.confirmDeleteId.set(null);
@@ -162,13 +179,20 @@ protected readonly filteredItems = computed(() => {
 });
 
   protected readonly totalPages = computed(() =>
-    Math.ceil(this.filteredItems().length / this.pageSize)
+    Math.ceil(this.filteredItems().length / this.pageSize())
   );
 
   protected readonly paginated = computed(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredItems().slice(start, start + this.pageSize);
+    const start = (this.currentPage() - 1) * this.pageSize();
+    return this.filteredItems().slice(start, start + this.pageSize());
   });
+
+  protected readonly rangeStart = computed(() =>
+    this.filteredItems().length === 0 ? 0 : (this.currentPage() - 1) * this.pageSize() + 1
+  );
+  protected readonly rangeEnd = computed(() =>
+    Math.min(this.currentPage() * this.pageSize(), this.filteredItems().length)
+  );
   
   goToPage(page: number): void {
   if (page >= 1 && page <= this.totalPages()) this.currentPage.set(page);
@@ -180,10 +204,29 @@ protected readonly filteredItems = computed(() => {
 
   onExpiryFilter(v: string): void { this.expiryFilter.set(v as any); this.currentPage.set(1); }
   clearFilters(): void { this.search.set(''); this.sortBy.set(''); this.expiryFilter.set('all'); this.currentPage.set(1); }
+  onPageSize(value: string): void { this.pageSize.set(Number(value)); this.currentPage.set(1); }
 
   protected truncate(text: string, max = 50): string {
     return text && text.length > max ? text.slice(0, max) + '...' : (text ?? '');
   }
+
+  protected showToast(type: 'success' | 'error', message: string): void {
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}`;
+    this.toasts.update(t => [...t, { id, type, message }]);
+    setTimeout(() => this.removeToast(id), 4000);
+  }
+
+  protected removeToast(id: string): void {
+    this.toasts.update(t => t.filter(x => x.id !== id));
+  }
+
+  private silentRefresh(): void {
+  this.service.getAll().pipe(
+    catchError(() => EMPTY)
+  ).subscribe(data => this.items.set(data));
+}
 
   ngOnDestroy(): void {
     this.destroy$.next();

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, EMPTY } from 'rxjs';
+import { Subject, EMPTY, interval } from 'rxjs';
 import { retry, finalize, takeUntil, switchMap, catchError } from 'rxjs/operators';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -10,6 +10,7 @@ import { Discount } from '@commercial/discount/models/discount.model';
 import { DiscountFilterPipe } from '@commercial/discount/pipes/discount-filter.pipe';
 import { DiscountStatusBadgeComponent } from '@commercial/discount/components/discount-status-badge/discount-status-badge';
 import { DiscountRefreshService } from '@commercial/discount/services/discount-refresh.service';
+interface Toast { id: string; type: 'success' | 'error'; message: string; }
 
 @Component({
   selector: 'app-discount-list-page',
@@ -34,7 +35,9 @@ export class DiscountListPage implements OnInit, OnDestroy {
   protected readonly statusFilter = signal<'all' | 'active' | 'inactive'>('all');
   protected readonly confirmToggleId      = signal<string | null>(null);
   protected readonly confirmToggleCurrent = signal(false);
-  protected readonly pageSize    = 5;
+  protected readonly toasts = signal<Toast[]>([]);
+  protected readonly pageSize        = signal(5);
+  protected readonly pageSizeOptions = [5, 10, 20];
 
   private readonly filterPipe = new DiscountFilterPipe();
   private readonly destroy$ = new Subject<void>();
@@ -66,6 +69,14 @@ export class DiscountListPage implements OnInit, OnDestroy {
       this.refreshService.onRefresh$.pipe(
         takeUntil(this.destroy$)
       ).subscribe(() => this.loadDiscounts());
+
+      interval(30_000).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      if (document.visibilityState === 'visible' && !this.loading()) {
+        this.silentRefresh();
+      }
+    });
     }
 
   categoryName(id: string): string {
@@ -88,7 +99,11 @@ export class DiscountListPage implements OnInit, OnDestroy {
     this.confirmToggleId.set(null);
     this.discounts.update(list => list.map(d => d.id === id ? { ...d, status: !current } : d));
     this.discountService.updateStatus(id, { status: !current }).subscribe({
-      error: () => this.discounts.update(list => list.map(d => d.id === id ? { ...d, status: current } : d))
+      next: () => this.showToast('success', current ? 'Descuento desactivado correctamente.' : 'Descuento activado correctamente.'),
+      error: () => {
+        this.discounts.update(list => list.map(d => d.id === id ? { ...d, status: current } : d));
+        this.showToast('error', 'No se pudo cambiar el estado. Intenta de nuevo.');
+      }
     });
   }
 
@@ -110,16 +125,23 @@ protected readonly filteredDiscounts = computed(() => {
 });
 
 protected readonly totalPages = computed(() =>
-  Math.ceil(this.filteredDiscounts().length / this.pageSize)
+  Math.ceil(this.filteredDiscounts().length / this.pageSize())
 );
 
 protected readonly paginatedDiscounts = computed(() => {
-  const s = (this.currentPage() - 1) * this.pageSize;
-  return this.filteredDiscounts().slice(s, s + this.pageSize);
+  const s = (this.currentPage() - 1) * this.pageSize();
+  return this.filteredDiscounts().slice(s, s + this.pageSize());
 });
 
 protected readonly totalActive   = computed(() => this.discounts().filter(d => d.status).length);
 protected readonly totalInactive = computed(() => this.discounts().filter(d => !d.status).length);
+
+protected readonly rangeStart = computed(() =>
+  this.filteredDiscounts().length === 0 ? 0 : (this.currentPage() - 1) * this.pageSize() + 1
+);
+protected readonly rangeEnd = computed(() =>
+  Math.min(this.currentPage() * this.pageSize(), this.filteredDiscounts().length)
+);
 
 goToPage(page: number): void  { if (page >= 1 && page <= this.totalPages()) this.currentPage.set(page); }
 onSearch(value: string): void { this.search.set(value); this.currentPage.set(1); }
@@ -127,9 +149,28 @@ onSort(value: string): void   { this.sortBy.set(value as any); this.currentPage.
 
 onStatusFilter(v: string): void { this.statusFilter.set(v as any); this.currentPage.set(1); }
 clearFilters(): void { this.search.set(''); this.sortBy.set(''); this.statusFilter.set('all'); this.currentPage.set(1); }
+onPageSize(value: string): void { this.pageSize.set(Number(value)); this.currentPage.set(1); }
 
 protected truncate(text: string, max = 50): string {
   return text && text.length > max ? text.slice(0, max) + '...' : (text ?? '');
+}
+
+protected showToast(type: 'success' | 'error', message: string): void {
+  const id = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}`;
+  this.toasts.update(t => [...t, { id, type, message }]);
+  setTimeout(() => this.removeToast(id), 4000);
+}
+
+protected removeToast(id: string): void {
+  this.toasts.update(t => t.filter(x => x.id !== id));
+}
+
+private silentRefresh(): void {
+  this.discountService.getAll().pipe(
+    catchError(() => EMPTY)
+  ).subscribe(data => this.discounts.set(data));
 }
 
 ngOnDestroy(): void {
