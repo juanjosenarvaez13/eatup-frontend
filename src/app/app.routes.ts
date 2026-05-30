@@ -24,7 +24,7 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'login',
+        redirectTo: 'commercial/sales',
         pathMatch: 'full'
       },
       {
@@ -117,11 +117,24 @@ export const routes: Routes = [
           import('./features/inventory/categories/categories.routes').then(
             m => m.CATEGORIES_ROUTES
           )
+      },
+                  {
+        path: 'inventor/locations',
+        loadChildren: () =>
+          import('./features/inventory/location/location.routes').then((m) => m.LOCATION_ROUTES),
+      },
+
+      {
+        path: 'inventory/recipes',
+        loadChildren: () =>
+          import('./features/inventory/recipe/recipe.routes').then(
+            m => m.RECIPE_ROUTES
+          )
       }
     ]
   },
   {
     path: '**',
-    redirectTo: 'login'
+    redirectTo: ''
   }
 ];

@@ -342,6 +342,7 @@ export class LayoutComponent {
       expanded: false,
       features: [
         { name: 'Descuentos', path: '/commercial/discount' },
+        { name: 'Descuentos por Cliente', path: '/commercial/customer-discount' },
         { name: 'Vendedores', path: '/commercial/seller' },
         { name: 'Compras',    path: '/commercial/purchases' },
         { name: 'Proveedores', path: '/commercial/provider' },
@@ -353,9 +354,11 @@ export class LayoutComponent {
       name: 'Inventory',
       expanded: true,
       features: [
-        { name: 'Transfer',   path: '/inventory/transfer' },
-        { name: 'Categories', path: '/inventory/categories' },
-        { name: 'Productos',  path: '/inventory/product' }
+        { name: 'Transfer',   path: '/inventory/transfer'   },
+        { name: 'Categorías', path: '/inventory/categories' },
+        { name: 'Productos',  path: '/inventory/product'    },
+        { name: 'Recetas',    path: '/inventory/recipes'    },
+        { name: 'Sedes',      path: '/inventor/locations' }
       ]
     }
   ]);
