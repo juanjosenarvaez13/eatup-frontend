@@ -41,6 +41,7 @@ export class CustomerDiscountListPage implements OnInit, OnDestroy {
   protected readonly discountMap  = signal<Map<string, string>>(new Map());
   protected readonly discountActiveMap = signal<Map<string, boolean>>(new Map());
   protected readonly clientMap    = signal<Map<string, string>>(new Map());
+  protected readonly clientActiveMap = signal<Map<string, boolean>>(new Map());
   protected readonly locationName = signal('—');
   protected readonly loading      = signal(false);
 
@@ -97,6 +98,9 @@ protected readonly statsVencidos = computed(() => {
         this.clientMap.set(
           new Map(clients.map(c => [c.id, `${c.firstName} ${c.firstLastName} — ${c.documentNumber}`]))
         );
+        this.clientActiveMap.set(
+            new Map(clients.map(c => [c.id, c.status !== 'INACTIVE']))
+          );
         if (loc) this.locationName.set(loc.name);
         else      this.locationName.set('—');
       },
@@ -143,6 +147,9 @@ protected readonly statsVencidos = computed(() => {
 
   protected discountName(id: string): string  { return this.discountMap().get(id) ?? '—'; }
   protected clientName(id: string): string    { return this.clientMap().get(id)   ?? '—'; }
+  protected clientIsActive(id: string): boolean {
+    return this.clientActiveMap().get(id) !== false;
+  }
   protected discountActive(id: string): boolean { return this.discountActiveMap().get(id) ?? true; }
 
   load(): void { this.loadTrigger$.next(); }

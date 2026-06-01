@@ -438,3 +438,23 @@ tbody tr:hover {
   font-size: 0.875rem;
   color: #94a3b8;
 }
+
+/* ── Badge cliente inactivo ─────────────────────────────── */
+.client-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.badge-inactive-client {
+  display: inline-block;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  width: fit-content;
+}

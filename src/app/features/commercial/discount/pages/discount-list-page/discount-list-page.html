@@ -139,7 +139,14 @@
           @for (discount of paginatedDiscounts(); track discount.id) {
             <tr>
               <td [title]="discount.description">{{ truncate(discount.description) }}</td>
-              <td [title]="categoryName(discount.categoryId)">{{ truncate(categoryName(discount.categoryId), 35) }}</td>
+              <td>
+                <div class="cat-cell">
+                  <span [title]="categoryName(discount.categoryId)">{{ truncate(categoryName(discount.categoryId), 35) }}</span>
+                  @if (categoryStatusMap().get(discount.categoryId) === false) {
+                    <span class="badge-inactive-cat">⚠ Cat. inactiva</span>
+                  }
+                </div>
+              </td>
               <td><span class="pct-badge">{{ discount.percentage }}%</span></td>
               <td>{{ discount.createdAt ? (discount.createdAt | date:'dd/MM/yyyy') : '—' }}</td>
               <td>{{ discount.modifiedAt ? (discount.modifiedAt | date:'dd/MM/yyyy') : '—' }}</td>

@@ -151,7 +151,14 @@
                 }
               </div>
             </td>
-            <td [title]="clientName(item.customerId)">{{ truncate(clientName(item.customerId), 35) }}</td>
+            <td>
+              <div class="client-cell">
+                <span [title]="clientName(item.customerId)">{{ truncate(clientName(item.customerId), 35) }}</span>
+                @if (!clientIsActive(item.customerId)) {
+                  <span class="badge-inactive-client">Inactivo</span>
+                }
+              </div>
+            </td>
             <td>{{ locationName() }}</td>
             <td>{{ item.assignedAt ? (item.assignedAt | date:'dd/MM/yyyy') : '—' }}</td>
             <td>{{ item.startDate ? (item.startDate | date:'dd/MM/yyyy') : 'Sin inicio' }}</td>

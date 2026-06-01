@@ -27,6 +27,7 @@ export class DiscountListPage implements OnInit, OnDestroy {
 
   protected readonly discounts   = signal<Discount[]>([]);
   protected readonly categoryMap = signal<Map<string, string>>(new Map());
+  protected readonly categoryStatusMap = signal<Map<string, boolean>>(new Map());
   protected readonly loading     = signal(false);
   protected readonly error       = signal('');
   protected readonly currentPage = signal(1);
@@ -45,7 +46,10 @@ export class DiscountListPage implements OnInit, OnDestroy {
 
    ngOnInit(): void {
       this.categoryService.getAll().subscribe({
-        next: (data) => this.categoryMap.set(new Map(data.map(c => [c.id, c.name])))
+        next: (data) => {
+          this.categoryMap.set(new Map(data.map(c => [c.id, c.name])));
+          this.categoryStatusMap.set(new Map(data.map(c => [c.id, c.status === 'ACTIVE']))); // ← nueva
+        }
       });
 
       this.loadTrigger$.pipe(
@@ -88,6 +92,13 @@ export class DiscountListPage implements OnInit, OnDestroy {
   }
 
   toggleStatus(id: string, current: boolean): void {
+    if (!current) {
+      const discount = this.discounts().find(d => d.id === id);
+      if (discount && this.categoryStatusMap().get(discount.categoryId) === false) {
+        this.showToast('error', 'No se puede activar: la categoría de este descuento está inactiva. Activa primero la categoría.');
+        return;
+      }
+    }
     this.confirmToggleId.set(id);
     this.confirmToggleCurrent.set(current);
   }
