@@ -84,7 +84,6 @@ import { Observable } from 'rxjs';
           <table class="data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Ruta</th>
                 <th>Fecha de salida</th>
                 <th>Fecha de llegada</th>
@@ -96,7 +95,6 @@ import { Observable } from 'rxjs';
             <tbody>
               @for (transfer of filteredTransfers(); track transfer.idTraslado) {
                 <tr>
-                  <td class="mono">#{{ transfer.idTraslado }}</td>
                   <td>
                     <div class="primary-cell">{{ locationLabel(transfer.sedeOrigen) }} -> {{ locationLabel(transfer.sedeDestino) }}</div>
                     <div class="secondary-cell">{{ roleLabel(transfer) }}</div>
