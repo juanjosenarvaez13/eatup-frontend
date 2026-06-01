@@ -7,9 +7,6 @@ import { CreateTransferRequest } from '../../models/transfer.model';
 import { TransferService } from '../../services/transfer.service';
 import { TransferReferenceDataService } from '../../services/transfer-reference-data.service';
 import { UserProfileService } from '@features/user/services/user-profile.service';
-import {
-  UserSummaryResponse
-} from '@features/user/models/user-profile.model';
 import { ProductResponse } from '@features/inventory/product/models/product.model';
 import { LocationResponse } from '@features/inventory/location/models/location.model';
 
@@ -92,21 +89,15 @@ interface TransferProductLine {
 
             <div class="field">
               <label for="responsable">Responsable</label>
-              <select
+              <input
                 id="responsable"
+                type="text"
                 class="input"
                 [(ngModel)]="form.responsable"
                 name="responsable"
                 required
-                [disabled]="loadingContext() || !responsibleUsers().length">
-                <option value="" disabled>Selecciona el responsable</option>
-                @for (user of responsibleUsers(); track user.email) {
-                  <option [value]="responsibleValue(user)">
-                    {{ responsibleLabel(user) }}
-                  </option>
-                }
-              </select>
-              <small>El backend guardara el nombre del usuario seleccionado.</small>
+                placeholder="Digita el nombre del responsable">
+              <small>Digita el nombre de la persona responsable del traslado.</small>
             </div>
 
             <div class="field">
@@ -370,7 +361,6 @@ export class TransferCreatePageComponent {
   protected readonly successMessage = signal<string | null>(null);
   protected readonly loadingContext = signal(true);
   protected readonly destinationLocations = signal<LocationResponse[]>([]);
-  protected readonly responsibleUsers = signal<UserSummaryResponse[]>([]);
   protected readonly productOptions = signal<ProductResponse[]>([]);
   protected readonly productLines = signal<TransferProductLine[]>([]);
   protected readonly currentLocationId = signal<string>('');
@@ -502,11 +492,6 @@ export class TransferCreatePageComponent {
       const currentLocationId = profile.editable.locationId || '';
       this.currentLocationId.set(currentLocationId);
       this.form.sedeOrigen = currentLocationId;
-      this.form.responsable = this.buildPersonName(
-        profile.editable.firstName,
-        profile.editable.lastName,
-        profile.editable.email
-      );
       this.currentLocationLabel.set(
         profile.locations.find(location => location.id === currentLocationId)?.name || 'Sede autenticada'
       );
@@ -520,17 +505,10 @@ export class TransferCreatePageComponent {
   }
 
   private async loadReferenceData(locationId: string): Promise<void> {
-    const [responsablesResult, productsResult, locationsResult] = await Promise.allSettled([
-      this.referenceDataService.loadResponsables(),
+    const [productsResult, locationsResult] = await Promise.allSettled([
       this.referenceDataService.loadProductsByLocation(locationId),
       this.referenceDataService.loadSelectableLocations()
     ]);
-
-    if (responsablesResult.status === 'fulfilled') {
-      this.responsibleUsers.set(responsablesResult.value);
-    } else {
-      this.error.set('No se pudo cargar la lista de responsables.');
-    }
 
     if (productsResult.status === 'fulfilled') {
       this.productOptions.set(productsResult.value);
@@ -557,15 +535,6 @@ export class TransferCreatePageComponent {
     }
   }
 
-  protected responsibleValue(user: UserSummaryResponse): string {
-    return this.buildPersonName(user.firstName, user.lastName, user.email);
-  }
-
-  protected responsibleLabel(user: UserSummaryResponse): string {
-    const value = this.responsibleValue(user);
-    return user.email ? `${value} — ${user.email}` : value;
-  }
-
   protected productLabel(product: ProductResponse): string {
     return `${product.name} — ${product.stock} ${product.unitOfMeasure}`;
   }
@@ -576,19 +545,5 @@ export class TransferCreatePageComponent {
 
   protected destinationLabel(location: LocationResponse): string {
     return `${location.name} - ${location.city}${location.active ? '' : ' (Inactiva)'}`;
-  }
-
-  private buildPersonName(
-    firstName?: string | null,
-    lastName?: string | null,
-    fallback?: string | null
-  ): string {
-    const fullName = [firstName, lastName]
-      .map(value => value?.trim())
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-
-    return fullName || fallback?.trim() || '';
   }
 }
