@@ -70,6 +70,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'commercial/clients',
+        loadChildren: () =>
+          import('./features/commercial/client/client.routes').then(
+            m => m.CLIENT_ROUTES
+          )
+      },
+      {
         path: 'commercial/seller',
         loadChildren: () =>
           import('./features/commercial/seller/seller.routes').then(

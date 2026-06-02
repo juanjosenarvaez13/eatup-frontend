@@ -443,6 +443,7 @@ export class SidebarComponent {
       features: [
         { name: 'Descuentos', path: '/commercial/discount' },
         { name: 'Descuentos por Cliente', path: '/commercial/customer-discount' },
+        { name: 'Clientes', path: '/commercial/clients' },
         { name: 'Vendedores', path: '/commercial/seller' },
         { name: 'Compras',    path: '/commercial/purchases' },
         { name: 'Mesas',      path: '/commercial/tables' },
