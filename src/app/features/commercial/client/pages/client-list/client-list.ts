@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
-import { filter, finalize } from 'rxjs';
+import { filter, finalize, forkJoin } from 'rxjs';
 
 import { Client, ClientStatus } from '@commercial/client/models/client.model';
 import { ClientCatalogService } from '@commercial/client/services/client-catalog.service';
@@ -41,6 +41,7 @@ export class ClientList implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
   private readonly documentTypeLabels = signal<Map<string, string>>(new Map());
+  private readonly cityLabels = signal<Map<string, string>>(new Map());
 
   protected readonly clients = signal<Client[]>([]);
   protected readonly loading = signal(false);
@@ -73,7 +74,7 @@ export class ClientList implements OnInit, OnDestroy {
         client.phone,
         client.documentNumber,
         this.documentTypeLabel(client.documentTypeId),
-        client.address,
+        this.cityLabel(client.cityId),
       ]
         .join(' ')
         .toLowerCase()
@@ -91,7 +92,7 @@ export class ClientList implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.loadDocumentTypes();
+    this.loadCatalogLookups();
     this.loadClients();
 
     this.route.queryParamMap.subscribe((params) => {
@@ -182,6 +183,11 @@ export class ClientList implements OnInit, OnDestroy {
     return label ?? 'Documento';
   }
 
+  protected cityLabel(cityId: string): string {
+    const label = this.cityLabels().get(cityId);
+    return label ?? 'Ciudad';
+  }
+
   protected fullName(client: Client): string {
     const firstName = (client.firstName ?? '').trim();
     const secondName = (client.secondName ?? '').trim();
@@ -200,18 +206,26 @@ export class ClientList implements OnInit, OnDestroy {
       .trim() || 'Sin nombre';
   }
 
-  private loadDocumentTypes(): void {
-    this.catalogService.getDocumentTypes().subscribe({
-      next: (types) => {
-        const labels = new Map(
-          types.map((type) => [
-            type.id,
-            type.shortLabel ? `${type.shortLabel} · ${type.label}` : type.label,
-          ]),
+  private loadCatalogLookups(): void {
+    forkJoin({
+      documentTypes: this.catalogService.getDocumentTypes(),
+      cities: this.catalogService.getCities(),
+    }).subscribe({
+      next: ({ documentTypes, cities }) => {
+        this.documentTypeLabels.set(
+          new Map(
+            documentTypes.map((type) => [
+              type.id,
+              type.shortLabel ? `${type.shortLabel} · ${type.label}` : type.label,
+            ]),
+          ),
         );
-        this.documentTypeLabels.set(labels);
+        this.cityLabels.set(new Map(cities.map((city) => [city.id, city.label])));
       },
-      error: () => this.documentTypeLabels.set(new Map()),
+      error: () => {
+        this.documentTypeLabels.set(new Map());
+        this.cityLabels.set(new Map());
+      },
     });
   }
 
