@@ -8,6 +8,7 @@ export interface Client {
   firstName: string;
   firstLastName: string;
   documentNumber: string;
+  status?: string;
 }
 
 @Injectable({ providedIn: 'root' })
