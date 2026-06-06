@@ -17,6 +17,7 @@ interface RegisterCatalogs {
 }
 
 type LocationCatalogItem = LocationOption & { active?: boolean | string | number };
+
 type LocationCatalogResponse =
   | LocationCatalogItem[]
   | {
@@ -29,7 +30,8 @@ type LocationCatalogResponse =
 @Injectable({ providedIn: 'root' })
 export class UserRegisterService {
   private readonly http = inject(HttpClient);
-  private readonly apiRoot = '';
+
+  private readonly apiRoot = ENV.apiUrl.replace(/\/api\/v1\/?$/, '');
 
   async loadCatalogs(): Promise<RegisterCatalogs> {
     const [docTypesResult, depsResult, locationsResult] = await Promise.allSettled([
@@ -41,34 +43,34 @@ export class UserRegisterService {
     return {
       documentTypes: docTypesResult.status === 'fulfilled' ? docTypesResult.value : [],
       departments: depsResult.status === 'fulfilled' ? depsResult.value : [],
-      locations: locationsResult.status === 'fulfilled'
-        ? this.onlyActiveLocations(locationsResult.value)
-        : []
+      locations:
+        locationsResult.status === 'fulfilled'
+          ? this.onlyActiveLocations(locationsResult.value)
+          : []
     };
   }
 
-private async loadLocations(): Promise<LocationOption[]> {
-  const fromActive = await this.fetchLocations(
-    `${this.apiRoot}/inventory/api/v1/location/active`
-  );
-  if (fromActive.length > 0) {
-    return fromActive;
-  }
-  return this.fetchLocations(`${this.apiRoot}/inventory/api/v1/location`);
-}
+  private async loadLocations(): Promise<LocationOption[]> {
+    const fromActive = await this.fetchLocations(
+      `${this.apiRoot}/inventory/api/v1/location/active`
+    );
 
-private async fetchLocations(url: string): Promise<LocationOption[]> {
-  try {
-    const response = await firstValueFrom(this.http.get<LocationCatalogResponse>(url));
-    console.log('>>> fetchLocations raw response para', url, response);
-    const result = this.onlyActiveLocations(response);
-    console.log('>>> onlyActiveLocations result:', result);
-    return result;
-  } catch (error) {
-    console.error('>>> fetchLocations error para URL:', url, error);
-    return [];
+    if (fromActive.length > 0) {
+      return fromActive;
+    }
+
+    return this.fetchLocations(`${this.apiRoot}/inventory/api/v1/location`);
   }
-}
+
+  private async fetchLocations(url: string): Promise<LocationOption[]> {
+    try {
+      const response = await firstValueFrom(this.http.get<LocationCatalogResponse>(url));
+      return this.onlyActiveLocations(response);
+    } catch (error) {
+      console.error('>>> fetchLocations error para URL:', url, error);
+      return [];
+    }
+  }
 
   private onlyActiveLocations(response: LocationCatalogResponse): LocationOption[] {
     const locations = this.extractLocationItems(response);
@@ -102,15 +104,15 @@ private async fetchLocations(url: string): Promise<LocationOption[]> {
     return Boolean(location.active);
   }
 
-
   async loadCities(departmentId: string): Promise<CityOption[]> {
     if (!departmentId) return [];
 
     try {
-      return await firstValueFrom(this.http.get<CityOption[]>(
-        `${this.apiRoot}/userapi/v1/cities`,
-        { params: { departmentId } }
-      ));
+      return await firstValueFrom(
+        this.http.get<CityOption[]>(`${this.apiRoot}/userapi/v1/cities`, {
+          params: { departmentId }
+        })
+      );
     } catch {
       return [];
     }
